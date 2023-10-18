@@ -1,53 +1,57 @@
-import speech_recognition as sr
-import librosa
 import numpy as np
-
-# Initialize the speech recognition recognizer
-recognizer = sr.Recognizer()
-
-# Start capturing audio from the microphone
-microphone = sr.Microphone()
-
-# Set the laughter detection threshold
-laughter_threshold = 0.5
-
-# Initialize variables for continuous laughter detection
-laughter_duration = 0
-# Maximum duration for continuous laughter (in seconds)
-max_laughter_duration = 10
-
-while True:
-    # Capture audio from the microphone
-    with microphone as source:
-        print("Listening...")
-        audio = recognizer.listen(source)
-
-    try:
-        # Recognize speech from the captured audio
-        text = recognizer.recognize_google(audio)
-
-        # Convert the audio to a numpy array for audio analysis
-        audio_np = np.array(audio.get_array_of_samples())
-
-        # Compute the audio energy using librosa
-        energy = np.sum(audio_np ** 2)
-
-        # Check if the audio energy exceeds the laughter threshold
-        if energy > laughter_threshold:
-            # Perform further processing for continuous laughter detection
-            laughter_duration += audio.duration
-            if laughter_duration >= max_laughter_duration:
-                # Generate the reward QR code# ...
-                print("laughter detected")
-
-        # Print the recognized speech and audio energy
-        print(f"Recognized Speech: {text}")
-        print(f"Audio Energy: {energy}")
-
-    except sr.UnknownValueError:
-        print("Could not understand the audio.")
+import speech_recognition as sr
 
 
-# Break the loop if the 'q' key is pressed
-    if input("Press 'q' to quit.") == 'q':
-        break
+class LaughterRecognizer:
+    """
+    A class for recognizing laughter sounds using a microphone and Google Speech Recognition API.
+
+    Attributes:
+        audio_threshold (int): The maximum amplitude of the audio signal required to detect laughter sounds.
+        recognizer (speech_recognition.Recognizer): The speech recognition engine used to recognize speech.
+        microphone (speech_recognition.Microphone): The microphone used to capture audio.
+
+    Methods:
+        recognize_laughter_sound(): Captures a short audio segment from the microphone and recognizes laughter sounds.
+    """
+
+    def __init__(self, audio_threshold=5000):
+        self.audio_threshold = audio_threshold
+        self.recognizer = sr.Recognizer()
+        self.microphone = sr.Microphone()
+
+    def recognize_laughter_sound(self):
+        # Adjust the microphone sensitivity to ambient noise
+        with self.microphone as source:
+            self.recognizer.adjust_for_ambient_noise(source)
+
+        # Capture a short audio segment from the microphone
+        try:
+            audio = self.recognizer.listen(
+                source, timeout=1, phrase_time_limit=1)
+        except sr.WaitTimeoutError:
+            # If no audio is captured, return False
+            return False
+
+        # Convert the audio segment to a numpy array
+        audio_data = np.frombuffer(audio.get_raw_data(), dtype=np.int16)
+
+        # Compute the maximum amplitude of the audio signal
+        max_amplitude = np.max(np.abs(audio_data))
+
+        # Check if the maximum amplitude is above the threshold
+        if max_amplitude > self.audio_threshold:
+            # Try to recognize the audio segment using Google Speech Recognition API
+            try:
+                transcript = self.recognizer.recognize_google(audio)
+            except sr.UnknownValueError:
+                # If no speech is recognized, return False
+                return False
+
+            # Check if the transcript contains the word "laugh" or "haha"
+            if "laugh" in transcript.lower() or "haha" in transcript.lower():
+                # Return True if laughter sound is detected
+                return True
+
+        # Return False otherwise
+        return False

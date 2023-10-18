@@ -17,10 +17,10 @@ class ListenSound(threading.Thread):
         Initializes the ListenSound object and starts the stream.
         """
         threading.Thread.__init__(self)
-        self.stream = sd.Stream(callback=self.is_loud)
+        self.stream = sd.Stream(callback=self.audio_level)
         self.stream.start()
 
-    def is_loud(self, indata, outdata, frames, time, status):
+    def audio_level(self, indata, outdata, frames, time, status):
         """
         A method to check the sound level.
 
@@ -31,12 +31,15 @@ class ListenSound(threading.Thread):
         time (CData): A ctypes structure containing timing information.
         status (CallbackFlags): A callback status object.
         """
-        global is_loud
-        volume_norm = np.linalg.norm(indata) * 10
-        if volume_norm > 1:
-            is_loud = True
+        rms = np.sqrt(np.mean(indata**2))
+        # Print loud if the rms is above a threshold (0.2)
+        if rms > 0.2:
+            self.loud = True
         else:
-            is_loud = False
+            self.loud = False
+
+    def is_loud(self):
+        return self.loud
 
 
 if __name__ == "__main__":

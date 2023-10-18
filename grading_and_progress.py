@@ -59,7 +59,7 @@ class App(threading.Thread):
 
     # Define a function that updates the progress value by 10 and calls the progress bar widget's update method
     def update_progress(self):
-        self.progress_value += 5
+        self.progress_value += 3
         self.progress_bar['value'] = self.progress_value
         self.progress_bar.update()
 
